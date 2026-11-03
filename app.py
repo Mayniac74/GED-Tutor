@@ -159,19 +159,36 @@ if user_prompt := st.chat_input("Type your response or thoughts here..."):
         role = "user" if m["role"] == "user" else "model"
         contents_payload.append(types.Content(role=role, parts=[types.Part.from_text(text=m["content"])]))
 
-    with st.chat_message("assistant"):
-        with st.spinner("Reviewing notes and preparing feedback..."):
-            try:
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=contents_payload,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        temperature=0.3,
-                    )
-                )
-                assistant_text = response.text
-                st.markdown(assistant_text)
-                st.session_state.messages.append({"role": "assistant", "content": assistant_text})
-            except Exception as e:
-                st.error(f"Error communicating with tutor: {e}")
+   with st.chat_message("assistant"):
+  with st.spinner("Reviewing notes and preparing feedback..."):
+    assistant_text = None
+    # Try primary model first, fallback to flash-lite if overloaded
+    for candidate_model in ["gemini-3.8-flash", "gemini-3.5-flash-lite"]:
+      try:
+        response = client.models.generate_content(
+            model=candidate_model,
+            contents=contents_payload,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.3,
+            ),
+        )
+        assistant_text = response.text
+        break  # Succeeded, stop trying
+      except Exception as e:
+        if "503" in str(e):
+          continue  # Model is busy, try the fallback model immediately
+        else:
+          st.error(f"Error: {e}")
+          break
+
+    if assistant_text:
+      st.markdown(assistant_text)
+      st.session_state.messages.append(
+          {"role": "assistant", "content": assistant_text}
+      )
+    elif not assistant_text:
+      st.warning(
+          "The AI service is briefly busy. Please tap send again in a few"
+          " seconds!"
+      )
