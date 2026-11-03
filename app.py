@@ -64,7 +64,8 @@ def load_all_curriculum_sources():
             except Exception as e:
                 st.warning(f"Could not scrape {url}: {e}")
 
-    return combined_text
+    # Cap text payload to stay well below the 250,000 Free Tier token limit
+    return combined_text[:120000]
 
 curriculum_sources = load_all_curriculum_sources()
 
@@ -129,7 +130,6 @@ with st.sidebar:
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-    # Warm welcome message to start
     welcome_text = (
         "Hello! I am so glad you are here working on your GED. "
         "Which of the four subjects would you like to explore today?\n\n"
@@ -153,26 +153,30 @@ if user_prompt := st.chat_input("Type your response or thoughts here..."):
     st.chat_message("user").markdown(user_prompt)
     st.session_state.messages.append({"role": "user", "content": user_prompt})
 
-    # Prepare chat history for API context
+    # Prepare rolling chat history (keeps last 6 messages to stay light and fast)
     contents_payload = []
-    for m in st.session_state.messages:
+    recent_messages = st.session_state.messages[-6:]
+    for m in recent_messages:
         role = "user" if m["role"] == "user" else "model"
         contents_payload.append(types.Content(role=role, parts=[types.Part.from_text(text=m["content"])]))
 
-with st.chat_message("assistant"):
-    with st.spinner("Thinking..."):
-        try:
-            response = client.models.generate_content(
-                model="gemini-3.5-flash-lite",
-                contents=contents_payload,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.3,
-                    max_output_tokens=600,  # Caps response size for instant, bite-sized replies
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-3.5-flash-lite",
+                    contents=contents_payload,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.3,
+                        max_output_tokens=600,
+                    )
                 )
-            )
-            assistant_text = response.text
-            st.markdown(assistant_text)
+                assistant_text = response.text
+                st.markdown(assistant_text)
+                st.session_state.messages.append({"role": "assistant", "content": assistant_text})
+            except Exception as e:
+                st.error(f"Error: {e}")
             st.session_state.messages.append({"role": "assistant", "content": assistant_text})
         except Exception as e:
             st.error(f"Error: {e}")
