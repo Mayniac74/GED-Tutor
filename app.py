@@ -158,7 +158,12 @@ if user_prompt := st.chat_input("Type your response or thoughts here..."):
     recent_messages = st.session_state.messages[-6:]
     for m in recent_messages:
         role = "user" if m["role"] == "user" else "model"
-        contents_payload.append(types.Content(role=role, parts=[types.Part.from_text(text=m["content"])]))
+        contents_payload.append(
+            types.Content(
+                role=role, 
+                parts=[types.Part.from_text(text=m["content"])]
+            )
+        )
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
@@ -170,13 +175,10 @@ if user_prompt := st.chat_input("Type your response or thoughts here..."):
                         system_instruction=system_instruction,
                         temperature=0.3,
                         max_output_tokens=600,
-                    )
+                    ),
                 )
                 assistant_text = response.text
                 st.markdown(assistant_text)
                 st.session_state.messages.append({"role": "assistant", "content": assistant_text})
             except Exception as e:
                 st.error(f"Error: {e}")
-            st.session_state.messages.append({"role": "assistant", "content": assistant_text})
-        except Exception as e:
-            st.error(f"Error: {e}")
