@@ -163,7 +163,7 @@ if user_prompt := st.chat_input("Type your response or thoughts here..."):
         with st.spinner("Reviewing notes and preparing feedback..."):
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.8-flash",
                     contents=contents_payload,
                     config=types.GenerateContentConfig(
                         system_instruction=system_instruction,
