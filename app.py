@@ -159,7 +159,7 @@ if user_prompt := st.chat_input("Type your response or thoughts here..."):
         role = "user" if m["role"] == "user" else "model"
         contents_payload.append(types.Content(role=role, parts=[types.Part.from_text(text=m["content"])]))
 
-   with st.chat_message("assistant"):
+with st.chat_message("assistant"):
   with st.spinner("Reviewing notes and preparing feedback..."):
     assistant_text = None
     # Try primary model first, fallback to flash-lite if overloaded
